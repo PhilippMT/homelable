@@ -106,15 +106,7 @@ a draft taken against an older version is discarded, because replaying it would
 revert a change made elsewhere.
 
 `/` at the start of a line opens the insert menu: the generated blocks above,
-plus table, checklist, callout, wiki-link, date and image.
-
-**Images** — `/image` opens a file dialog; dropping a file on the source or
-pasting a screenshot does the same without the menu. The file goes to
-`POST /api/v1/media/upload` and the editor writes `![name](/api/v1/media/<uuid>.png)`
-at the caret. PNG, JPEG and WebP, 10 MB each. The upload happens at once but the
-document still saves only when you save it. A file is not tied to its document:
-removing the markdown, or the document, leaves it on disk, and the `.md` export
-carries the link, not the file.
+plus table, checklist, callout, wiki-link and date.
 
 `[[` opens the link picker, anywhere in the line: filter by title, pick, and the
 finished link is written for you. It offers documents only — a device with no
@@ -281,5 +273,6 @@ into `localStorage` with no search and no history.
 
 ## Not built yet
 
-Import of a tree of `.md` files, a print/handbook view, an aggregated open-tasks
-view, and bundling uploaded media into the export — the planned second lot.
+Export/import of the tree as `.md` files, a print/handbook view, an aggregated
+open-tasks view, and image upload inside a document (would reuse
+`api/routes/media.py`, full-mode only) — the planned second lot.
