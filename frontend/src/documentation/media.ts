@@ -6,25 +6,35 @@
  * the refusal name the formats instead of relaying a 415.
  */
 
-export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+/** Shown in the page. */
+export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
 
-/** The same list, as a sentence can carry it. */
-export const SUPPORTED_LABEL = 'PNG, JPEG or WebP'
+/** Linked rather than shown: markdown has no way to embed them. */
+export const LINKED_TYPES = ['application/pdf']
+
+/** Both lists, as a sentence can carry them. */
+export const SUPPORTED_LABEL = 'PNG, JPEG, WebP, SVG or PDF'
+
+/** Where uploads are served from — the prefix of every URL the upload returns. */
+export const MEDIA_PATH = '/api/v1/media/'
 
 export function isSupportedMedia(file: File): boolean {
-  return IMAGE_TYPES.includes(file.type)
+  return IMAGE_TYPES.includes(file.type) || LINKED_TYPES.includes(file.type)
 }
 
 /**
- * The markdown that shows an uploaded file.
+ * The markdown that shows an uploaded file: an image, or a link for a type
+ * that cannot be shown inline.
  *
- * The alt text is the file name without its extension. Brackets are dropped
- * rather than escaped: they would close the alt early, and the source is meant
- * to stay readable.
+ * An image is named after the file without its extension; a link keeps it,
+ * since the extension is what says a click opens a PDF. Brackets are dropped
+ * rather than escaped: they would close the label early, and the source is
+ * meant to stay readable.
  */
 export function mediaMarkdown(file: File, url: string): string {
-  const alt = file.name.replace(/\.[^.]+$/, '').replace(/[[\]\s]+/g, ' ').trim() || 'image'
-  return `![${alt}](${url})`
+  const name = file.name.replace(/[[\]\s]+/g, ' ').trim()
+  if (LINKED_TYPES.includes(file.type)) return `[${name || 'file'}](${url})`
+  return `![${name.replace(/\.[^.]+$/, '').trim() || 'image'}](${url})`
 }
 
 /** The server's own reason when it gave one — it names the limit that was hit. */
