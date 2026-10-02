@@ -4,7 +4,6 @@ import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
 
 import { parseFrontmatter } from '../frontmatter'
-import { MEDIA_PATH } from '../media'
 import { toggleTaskAtLine } from './tasks'
 import { WikiText } from './WikiText'
 import type { LinkableDevice, LinkableDoc } from '../wikilinks'
@@ -82,9 +81,7 @@ export function Markdown({
       a: ({ children, href }) => (
         <a
           href={href}
-          // An uploaded file opens beside the page, like an outside link —
-          // following it in place would unload the app.
-          target={href?.startsWith('http') || href?.startsWith(MEDIA_PATH) ? '_blank' : undefined}
+          target={href?.startsWith('http') ? '_blank' : undefined}
           rel="noreferrer"
           className="text-primary underline underline-offset-2 hover:no-underline"
         >

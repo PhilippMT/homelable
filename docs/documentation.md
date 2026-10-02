@@ -106,24 +106,15 @@ a draft taken against an older version is discarded, because replaying it would
 revert a change made elsewhere.
 
 `/` at the start of a line opens the insert menu: the generated blocks above,
-plus table, checklist, callout, wiki-link, date, image and PDF.
+plus table, checklist, callout, wiki-link, date and image.
 
-**Media** — `/image` and `/pdf` open a file dialog; dropping a file on the
-source or pasting a screenshot does the same without the menu. The file goes to
-`POST /api/v1/media/upload` and the editor writes its markdown at the caret:
-
-| Format | Inserted as |
-|---|---|
-| PNG, JPEG, WebP, SVG | an image — `![name](/api/v1/media/<uuid>.png)` |
-| PDF | a link that opens in a new tab — `[name.pdf](/api/v1/media/<uuid>.pdf)` |
-
-10 MB each. The upload happens at once but the document still saves only when
-you save it. A file is not tied to its document: removing the markdown, or the
-document, leaves it on disk, and the `.md` export carries the link, not the file.
-
-An SVG can carry script, and uploads are served publicly from the app's own
-origin, so one is served with `Content-Security-Policy: … sandbox`: shown in a
-page it is an inert image, and opened at its own URL its scripts do not run.
+**Images** — `/image` opens a file dialog; dropping a file on the source or
+pasting a screenshot does the same without the menu. The file goes to
+`POST /api/v1/media/upload` and the editor writes `![name](/api/v1/media/<uuid>.png)`
+at the caret. PNG, JPEG and WebP, 10 MB each. The upload happens at once but the
+document still saves only when you save it. A file is not tied to its document:
+removing the markdown, or the document, leaves it on disk, and the `.md` export
+carries the link, not the file.
 
 `[[` opens the link picker, anywhere in the line: filter by title, pick, and the
 finished link is written for you. It offers documents only — a device with no

@@ -9,11 +9,6 @@ describe('isSupportedMedia', () => {
     expect(isSupportedMedia(file('a.png', 'image/png'))).toBe(true)
     expect(isSupportedMedia(file('a.jpg', 'image/jpeg'))).toBe(true)
     expect(isSupportedMedia(file('a.webp', 'image/webp'))).toBe(true)
-    expect(isSupportedMedia(file('a.svg', 'image/svg+xml'))).toBe(true)
-  })
-
-  it('takes a PDF, which is linked rather than shown', () => {
-    expect(isSupportedMedia(file('a.pdf', 'application/pdf'))).toBe(true)
   })
 
   it('refuses everything else, an unknown type included', () => {
@@ -36,15 +31,6 @@ describe('mediaMarkdown', () => {
 
   it('falls back to a plain alt when the name leaves nothing', () => {
     expect(mediaMarkdown(file('.png', 'image/png'), '/u.png')).toBe('![image](/u.png)')
-  })
-
-  it('writes an SVG as an image', () => {
-    expect(mediaMarkdown(file('topology.svg', 'image/svg+xml'), '/u.svg')).toBe('![topology](/u.svg)')
-  })
-
-  it('writes a PDF as a link that keeps its extension', () => {
-    expect(mediaMarkdown(file('UPS [manual].pdf', 'application/pdf'), '/u.pdf')).toBe('[UPS manual .pdf](/u.pdf)')
-    expect(mediaMarkdown(file('', 'application/pdf'), '/u.pdf')).toBe('[file](/u.pdf)')
   })
 })
 

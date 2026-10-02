@@ -61,56 +61,10 @@ describe('DocEditor — media', () => {
     // leaves nothing behind.
     await waitFor(() => expect(source().value).toBe('Intro\n'))
 
-    await user.upload(screen.getByLabelText('Upload a file'), png())
+    await user.upload(screen.getByLabelText('Upload an image'), png())
 
     await waitFor(() => expect(source().value).toBe('Intro\n![rack](/api/v1/media/abc.png)'))
     expect(api.upload).toHaveBeenCalledTimes(1)
-  })
-
-  it('uploads the file picked from /pdf and links it', async () => {
-    const user = userEvent.setup()
-    api.upload.mockResolvedValue({ url: '/api/v1/media/abc.pdf', filename: 'abc.pdf' })
-    setupLive()
-
-    await user.click(source())
-    await user.keyboard('/')
-    await user.click(await screen.findByText('/pdf'))
-    const input = screen.getByLabelText('Upload a file') as HTMLInputElement
-    // Narrowed to the command: the dialog offers PDFs, not images.
-    expect(input.accept).toBe('application/pdf')
-
-    await user.upload(input, new File(['x'], 'manual.pdf', { type: 'application/pdf' }))
-
-    await waitFor(() => expect(source().value).toBe('[manual.pdf](/api/v1/media/abc.pdf)'))
-  })
-
-  it('offers images, SVG included, from /image', async () => {
-    const user = userEvent.setup()
-    setupLive()
-
-    await user.click(source())
-    await user.keyboard('/')
-    await user.click(await screen.findByText('/image'))
-
-    expect((screen.getByLabelText('Upload a file') as HTMLInputElement).accept).toBe(
-      'image/png,image/jpeg,image/webp,image/svg+xml',
-    )
-  })
-
-  it('takes a dropped SVG and a dropped PDF together', async () => {
-    api.upload
-      .mockResolvedValueOnce({ url: '/api/v1/media/a.svg', filename: 'a.svg' })
-      .mockResolvedValueOnce({ url: '/api/v1/media/b.pdf', filename: 'b.pdf' })
-    setupLive()
-
-    drop([
-      new File(['<svg/>'], 'topology.svg', { type: 'image/svg+xml' }),
-      new File(['x'], 'manual.pdf', { type: 'application/pdf' }),
-    ])
-
-    await waitFor(() =>
-      expect(source().value).toBe('![topology](/api/v1/media/a.svg)\n[manual.pdf](/api/v1/media/b.pdf)'),
-    )
   })
 
   it('uploads a dropped image and inserts it at the caret', async () => {
@@ -169,7 +123,7 @@ describe('DocEditor — media', () => {
 
     drop([new File(['x'], 'notes.txt', { type: 'text/plain' })])
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Only PNG, JPEG, WebP, SVG or PDF can go in a document'))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Only PNG, JPEG or WebP can go in a document'))
     expect(api.upload).not.toHaveBeenCalled()
     expect(onChange).not.toHaveBeenCalled()
   })

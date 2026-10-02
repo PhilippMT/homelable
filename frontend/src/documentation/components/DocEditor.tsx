@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { documentsApi, mediaApi } from '@/api/client'
 import { caretPoint, placeMenu, type CaretPoint, type Placement } from '@/documentation/caret'
 import { useDocHistory } from '@/documentation/history'
-import { IMAGE_TYPES, LINKED_TYPES, SUPPORTED_LABEL, isSupportedMedia, mediaMarkdown, uploadError } from '@/documentation/media'
+import { IMAGE_TYPES, SUPPORTED_LABEL, isSupportedMedia, mediaMarkdown, uploadError } from '@/documentation/media'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Markdown } from '../markdown/Markdown'
@@ -110,22 +110,18 @@ export function DocEditor({
           },
         }))
       : []
-    // These insert nothing themselves: they take the `/` away and open the
-    // file dialog, and the picked file lands at the caret once it is uploaded.
-    // One input serves both, narrowed to what the command is for.
-    const pick = (types: string[]) => () => {
-      const input = fileInput.current
-      if (input) {
-        input.accept = types.join(',')
-        input.click()
-      }
-      return ''
+    const image: SlashCommand = {
+      id: 'image',
+      label: '/image',
+      hint: 'Upload an image — or drop or paste one',
+      // Inserts nothing itself: it takes the `/` away and opens the file
+      // dialog, and the picked file lands at the caret once it is uploaded.
+      insert: () => {
+        fileInput.current?.click()
+        return ''
+      },
     }
-    const uploads: SlashCommand[] = [
-      { id: 'image', label: '/image', hint: 'Upload an image — or drop or paste one', insert: pick(IMAGE_TYPES) },
-      { id: 'pdf', label: '/pdf', hint: 'Upload a PDF, inserted as a link', insert: pick(LINKED_TYPES) },
-    ]
-    return [...generated, ...PLAIN_SNIPPETS, ...uploads]
+    return [...generated, ...PLAIN_SNIPPETS, image]
   }, [deviceId])
 
   const visible = useMemo(() => {
@@ -467,7 +463,8 @@ export function DocEditor({
             ref={fileInput}
             type="file"
             multiple
-            aria-label="Upload a file"
+            accept={IMAGE_TYPES.join(',')}
+            aria-label="Upload an image"
             className="hidden"
             onChange={(event) => {
               const files = Array.from(event.target.files ?? [])
