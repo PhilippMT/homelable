@@ -63,6 +63,57 @@ docker compose -f docker-compose.prebuilt.yml up -d
 
 Update the same way: `docker compose -f docker-compose.prebuilt.yml pull && … up -d`.
 
+## UniFi inventory sync
+
+Configure the **backend** environment to enable Settings → UniFi auto-sync and
+manual re-sync. With Docker Compose, edit the installation's root `.env` (passed
+to the backend via `env_file`). With the bare-metal installation, edit
+`backend/.env`. For example, for a UniFi OS console:
+
+```dotenv
+UNIFI_HOST=192.168.1.1
+UNIFI_PORT=443
+UNIFI_USER=inventory-reader
+UNIFI_PASS='replace-with-local-password'
+UNIFI_SITE=default
+UNIFI_VERIFY_TLS=false
+```
+
+- **`UNIFI_HOST`**: only the controller's IP address or hostname, such as
+  `192.168.1.1` or `unifi.lan`. Do **not** include `https://`, a port, or a path.
+  The backend uses HTTPS and adds `UNIFI_PORT` itself.
+- **`UNIFI_PORT`**: `443` for UniFi OS consoles (Dream Machine / Cloud Gateway);
+  `8443` for legacy/self-hosted Network Controllers, which is the default.
+- **`UNIFI_USER` / `UNIFI_PASS`**: the username and password of a **local UniFi
+  controller account** permitted to read the selected Network site. These are
+  not Homelable credentials or an API key; cloud/MFA login flows are unsupported.
+  `UNIFI_USERNAME` and `UNIFI_PASSWORD` are also accepted. Single-quote passwords
+  containing `$` in `.env` to prevent Docker Compose interpolation.
+- **`UNIFI_SITE`**: the site's identifier (normally `default`), not its display
+  name.
+- **`UNIFI_VERIFY_TLS`**: defaults to `false` for self-signed controllers.
+  Prefer `true` when the backend trusts the controller's certificate.
+
+Alternatively, set **`UNIFI_URL=https://192.168.1.1:443`** instead of
+`UNIFI_HOST` / `UNIFI_PORT`. `UNIFI_URL` takes precedence over `UNIFI_HOST`;
+include the port explicitly, since an omitted URL port falls back to
+`UNIFI_PORT` (default `8443`). Do not append a Network application or API path.
+
+Apply changes with `docker compose up -d --force-recreate backend`, or
+`sudo systemctl restart homelable` for the bare-metal installation.
+Settings are read at backend startup; `docker compose restart` alone does not
+reload a changed Compose `.env`. Exporting variables in your shell does not
+automatically forward them into the container.
+
+If Settings still says to set `UNIFI_HOST`, or saving auto-sync returns
+`Cannot enable auto-sync: no UniFi host/credentials configured in the server env.`,
+the running backend has no effective host or credentials. Older versions could
+also overwrite the environment host with an empty host saved in
+`scan_config.json`. Current versions ignore saved connection settings and persist
+only sync activation, interval, and import modes: update the backend and recreate
+it after configuring the environment. One-off imports can still use credentials
+entered in the import dialog; those do not configure Settings auto-sync.
+
 ## Scanning from Docker — MAC addresses
 
 Out of the box the backend runs on a Docker bridge network, and **the scan will

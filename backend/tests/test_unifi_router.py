@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.routes.unifi import _find_existing, _persist_devices
-from app.core.config import settings
+from app.core.config import Settings, settings
 from app.db.models import InventoryDevice, ScanRun
 
 
@@ -68,6 +71,83 @@ async def test_enable_sync_without_credentials_rejected(client: AsyncClient, hea
         headers=headers,
     )
     assert res.status_code == 400
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", ["environment", "dotenv"])
+@pytest.mark.parametrize("user_key,password_key", [
+    ("UNIFI_USER", "UNIFI_PASS"),
+    ("UNIFI_USERNAME", "UNIFI_PASSWORD"),
+])
+async def test_env_config_survives_stale_overrides_and_enables_sync(
+    client: AsyncClient, headers: dict, monkeypatch, tmp_path, source, user_key, password_key
+) -> None:
+    """Load real env settings, not assigned attributes, through the UI endpoints."""
+    values = {
+        "UNIFI_HOST": "192.168.1.1",
+        "UNIFI_PORT": "443",
+        user_key: "inventory-reader",
+        password_key: "test-only-unifi-password",
+    }
+    for key in (
+        "UNIFI_HOST", "UNIFI_URL", "UNIFI_PORT",
+        "UNIFI_USER", "UNIFI_PASS", "UNIFI_USERNAME", "UNIFI_PASSWORD",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    env_file = None
+    if source == "dotenv":
+        env_file = tmp_path / ".env"
+        env_file.write_text("\n".join(f"{key}={value}" for key, value in values.items()))
+    else:
+        for key, value in values.items():
+            monkeypatch.setenv(key, value)
+    configured = Settings(_env_file=env_file, sqlite_path=str(tmp_path / "homelab.db"))
+    configured._override_path().write_text(json.dumps({
+        "unifi_host": "",
+        "unifi_url": "",
+        "unifi_port": 8443,
+        "unifi_username": "",
+        "unifi_password": "",
+        "unifi_sync_enabled": False,
+    }))
+    configured.load_overrides()
+    monkeypatch.setattr("app.api.routes.unifi.settings", configured)
+    enable_sync = Mock()
+    reschedule = Mock()
+    fetch = AsyncMock(return_value=[])
+    monkeypatch.setattr("app.api.routes.unifi.set_unifi_sync_enabled", enable_sync)
+    monkeypatch.setattr("app.api.routes.unifi.reschedule_unifi_sync", reschedule)
+    monkeypatch.setattr("app.api.routes.unifi.fetch_unifi_inventory", fetch)
+
+    res = await client.get("/api/v1/unifi/config", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["host"] == "192.168.1.1"
+    assert res.json()["port"] == 443
+    assert res.json()["credentials_configured"] is True
+    assert values[password_key] not in res.text
+
+    res = await client.post(
+        "/api/v1/unifi/config",
+        json={"sync_enabled": True, "sync_interval": 600},
+        headers=headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["sync_enabled"] is True
+    enable_sync.assert_called_once_with(True)
+    reschedule.assert_called_once_with(600)
+    persisted = json.loads(configured._override_path().read_text())
+    assert persisted["unifi_sync_enabled"] is True
+    for key in ("host", "url", "port", "username", "password", "user", "pass"):
+        assert f"unifi_{key}" not in persisted
+
+    res = await client.post("/api/v1/unifi/sync-now", headers=headers)
+    assert res.status_code == 200
+    fetch.assert_awaited_once()
+    assert fetch.call_args.kwargs["host"] == values["UNIFI_HOST"]
+    assert fetch.call_args.kwargs["port"] == 443
+    assert fetch.call_args.kwargs["username"] == values[user_key]
+    assert fetch.call_args.kwargs["password"] == values[password_key]
+
 # --- _find_existing --------------------------------------------------------
 
 @pytest.mark.asyncio
